@@ -1,6 +1,6 @@
 {
   "name": "yii2-rbac/client",
-  "type": "Rbac Client",
+  "type": "laravel-extention",
   "description": "Implementation of Rbac Client",
   "keywords": ["rbac client"],
   "homepage": "https://github.com/yii2-rbac/client",
