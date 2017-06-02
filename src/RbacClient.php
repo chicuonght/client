@@ -42,7 +42,7 @@ class RbacClient{
         ];
 
         $response  = $this->client->request($method, $this->url, $options);
-        return $response->getStatusCode();
+
         if($response->getStatusCode()  == 200){
             return $response->getBody();
 
