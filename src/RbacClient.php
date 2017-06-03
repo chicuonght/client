@@ -16,60 +16,87 @@ use WoohooLabs\Yang\JsonApi\Response\JsonApiResponse;
  * Date: 2017-06-02
  * Time: 2:36 PM
  */
-class RbacClient{
+class RbacClient
+{
 
+
+    /**
+     * @var JsonApiClient
+     */
     public $client;
-    public $url;
-    public   $headers = [
-        'Authorization' => null,
-        'Content-Type' => 'application/vnd.api+json'
-    ];
 
+    /**
+     * @var array
+     */
     public $response = [];
 
-    public $error;
 
+    /**
+     * @var JsonApiRequestBuilder
+     */
+    public $requestBuilder;
+
+    /**
+     * RbacClient constructor.
+     *
+     * @param string $url
+     * @param string $jwtToken
+     */
     public function __construct(string $url, string $jwtToken)
     {
-        $this->url = $url;
-        $this->headers['Authorization'] = sprintf('Bearer %s', $jwtToken);
-
-
-        $this->client = new \GuzzleHttp\Client();
-    }
-
-    public function check(string $permission, array $params = []){
-        $result = false;
-        $resource = new ResourceObject("Authorize");
-        $resource ->setAttributes([
-            'permission' => $permission,
-            'data' => $params,
-        ]);
         $guzzleClient = Client::createWithConfig([]);
         // Instantiate the syncronous JSON:API Client
         $this->client = new JsonApiClient ($guzzleClient);
-        $request = new Request('', '');
-        $requestBuilder = new JsonApiRequestBuilder($request);
-        $requestBuilder->setProtocolVersion("2.0")
-            ->setMethod("POST")
-            ->setUri($this->url)
-            ->setHeader("Authorization", $this->headers['Authorization'])
-            ->setHeader("Content-Type", $this->headers['Content-Type'])
-            ->setJsonApiBody($resource);
-        $request = $requestBuilder->getRequest();
 
-        $psr7Response  = $this->client->sendRequest($request);
+        $request = new Request('', '');
+        $this->requestBuilder = new JsonApiRequestBuilder($request);
+        $this->requestBuilder->setProtocolVersion("2.0")
+            ->setMethod("POST")
+            ->setUri($url)
+            ->setHeader("Authorization", sprintf('Bearer %s', $jwtToken))
+            ->setHeader("Content-Type", 'application/vnd.api+json');
+    }
+
+    /**
+     * @param string $permission Permission Name
+     * @param array $params      Data to check Permission Rule
+     *
+     * @return bool
+     */
+    public function checkPermission(string $permission, array $params = []): bool
+    {
+        $resource = new ResourceObject("Authorize");
+        $resource->setAttributes([
+            'permission' => $permission,
+            'data'       => $params,
+        ]);
+
+        $this->requestBuilder->setJsonApiBody($resource);
+
+        return $this->sendRequest();
+    }
+
+    /**
+     * Send request to Authorize server
+     * @return bool
+     */
+    protected function sendRequest(): bool {
+        $request = $this->requestBuilder->getRequest();
+
+        $psr7Response = $this->client->sendRequest($request);
 
         $response = new JsonApiResponse($psr7Response);
         $document = $response->document();
-        if($response->isSuccessfulDocument()){
-            $result = true;
-            $this->response =  $document->primaryResource();
-        }else{
-            $body =  $psr7Response->getBody();
-            $this->response = \GuzzleHttp\json_decode($body);
-        }
 
-        return $result;
+        if ($response->isSuccessfulDocument()) {
+            $this->response = $document->primaryResource();
+            return true;
+        } else {
+            $body = $psr7Response->getBody();
+            $this->response = \GuzzleHttp\json_decode($body);
+            return false;
+        }
     }
+
+
 }
